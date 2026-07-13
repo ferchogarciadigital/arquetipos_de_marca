@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Arquetipo de Marca | Emprendedores</title>
+    
+    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Configuración de Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            dark: '#0f172a',
+                            card: 'rgba(30, 41, 59, 0.7)',
+                            accent: '#3b82f6',
+                            accentHover: '#2563eb'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Estilos Personalizados -->
+    <style>
+        body {
+            background-color: #0f172a;
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: #f8fafc;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .glass-card {
+            background: var(--tw-colors-brand-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .option-btn {
+            transition: all 0.3s ease;
+        }
+        .option-btn:hover {
+            transform: translateY(-2px);
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s forwards;
+        }
+        .slide-up {
+            animation: slideUp 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Ocultar elementos en la impresión PDF */
+        .pdf-hide { display: block; }
+        .pdf-mode .pdf-hide { display: none !important; }
+        .pdf-mode { background: #fff !important; color: #000 !important; }
+        .pdf-mode .glass-card { background: #f8fafc !important; border: 1px solid #e2e8f0; color:#0f172a; }
+        .pdf-mode * { color: #0f172a !important; }
+    </style>
+
+    <!-- Librerías Externas -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="flex items-center justify-center p-4 antialiased selection:bg-blue-500 selection:text-white">
+
+    <div id="app" class="w-full max-w-3xl">
+        <!-- Pantalla de Inicio -->
+        <div id="start-screen" class="glass-card rounded-2xl p-8 md:p-12 text-center slide-up">
+            <div class="flex justify-center mb-6">
+                <i data-lucide="fingerprint" class="w-16 h-16 text-blue-500"></i>
+            </div>
+            <h1 class="text-3xl md:text-5xl font-bold mb-4 tracking-tight">Descubre tu Arquetipo de Marca</h1>
+            <p class="text-slate-400 text-lg mb-8 leading-relaxed max-w-2xl mx-auto">
+                Tu marca no es un logo, es la personalidad de tu negocio. Responde estas 20 preguntas estratégicas para descubrir qué arquetipo rige tus decisiones empresariales, incluyendo tus luces y tus sombras (sí, incluso si eres un villano).
+            </p>
+            <button onclick="startTest()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-4 px-10 rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-blue-500/30">
+                Comenzar Diagnóstico
+            </button>
+        </div>
+
+        <!-- Pantalla del Test -->
+        <div id="test-screen" class="hidden slide-up">
+            <div class="mb-8">
+                <div class="flex justify-between text-sm text-slate-400 mb-2 font-medium">
+                    <span>Progreso del perfilado</span>
+                    <span id="progress-text">1 / 20</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-blue-500 h-2.5 rounded-full transition-all duration-500" style="width: 5%"></div>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6 md:p-10">
+                <h2 id="question-text" class="text-2xl md:text-3xl font-semibold mb-8 leading-snug"></h2>
+                <div id="options-container" class="grid grid-cols-1 gap-4">
+                    <!-- Las opciones se inyectan aquí con JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Pantalla de Carga -->
+        <div id="loading-screen" class="hidden glass-card rounded-2xl p-12 text-center fade-in">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-6"></div>
+            <h3 class="text-2xl font-bold mb-2">Analizando perfil psicológico...</h3>
+            <p class="text-slate-400">Cruzando patrones de decisión y comportamiento empresarial.</p>
+        </div>
+
+        <!-- Pantalla de Resultados (Reporte) -->
+        <div id="result-wrapper" class="hidden fade-in">
+            <div id="report-content" class="glass-card rounded-2xl overflow-hidden">
+                <!-- Cabecera del reporte -->
+                <div id="result-header" class="p-8 md:p-12 text-center relative border-b border-white/10">
+                    <div class="absolute top-0 left-0 w-full h-full opacity-10" id="result-bg" style="background: linear-gradient(45deg, #3b82f6, transparent);"></div>
+                    <div class="relative z-10 flex flex-col items-center">
+                        <div id="archetype-icon-container" class="w-24 h-24 rounded-2xl bg-white/5 flex items-center justify-center mb-6 border border-white/10 shadow-2xl">
+                            <!-- Icono dinámico -->
+                        </div>
+                        <h4 class="text-blue-400 font-bold tracking-widest uppercase text-sm mb-2">Tu Arquetipo Dominante es</h4>
+                        <h1 id="archetype-name" class="text-4xl md:text-6xl font-extrabold mb-4">El Nombre</h1>
+                        <p id="archetype-tagline" class="text-xl md:text-2xl text-slate-300 font-light italic">"La frase insignia del arquetipo"</p>
+                    </div>
+                </div>
+
+                <!-- Cuerpo del reporte -->
+                <div class="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div class="col-span-1 md:col-span-2">
+                        <h3 class="text-xl font-bold mb-3 flex items-center gap-2"><i data-lucide="brain" class="w-5 h-5 text-blue-500"></i> Perfil Psicológico</h3>
+                        <p id="archetype-desc" class="text-slate-300 leading-relaxed text-lg"></p>
+                    </div>
+                    
+                    <div class="bg-white/5 p-6 rounded-xl border border-white/5">
+                        <h3 class="text-lg font-bold mb-4 text-green-400 flex items-center gap-2"><i data-lucide="zap" class="w-5 h-5"></i> Superpoderes (Fortalezas)</h3>
+                        <ul id="archetype-strengths" class="space-y-3 text-slate-300"></ul>
+                    </div>
+
+                    <div class="bg-white/5 p-6 rounded-xl border border-white/5">
+                        <h3 class="text-lg font-bold mb-4 text-red-400 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> Sombras (Riesgos)</h3>
+                        <ul id="archetype-risks" class="space-y-3 text-slate-300"></ul>
+                    </div>
+
+                    <div class="col-span-1 md:col-span-2 bg-blue-500/10 p-6 md:p-8 rounded-xl border border-blue-500/20">
+                        <h3 class="text-xl font-bold mb-3 text-blue-400 flex items-center gap-2"><i data-lucide="compass" class="w-5 h-5"></i> Estrategia Recomendada</h3>
+                        <p id="archetype-strategy" class="text-slate-300 leading-relaxed"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón de descarga fuera del área que se captura en PDF -->
+            <div class="mt-8 text-center pdf-hide">
+                <button onclick="downloadReport()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-3 mx-auto w-full md:w-auto">
+                    <i data-lucide="download" class="w-5 h-5"></i> Descargar Reporte Ejecutivo
+                </button>
+                <button onclick="location.reload()" class="mt-4 text-slate-400 hover:text-white text-sm underline transition-colors">Volver a hacer el test</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lógica de la Aplicación -->
+    <script>
+        // --- BASE DE DATOS DE ARQUETIPOS ---
+        const archetypesData = {
+            inocente: {
+                name: "El Inocente",
+                tagline: "El negocio fluye cuando hay transparencia y optimismo.",
+                icon: "sun",
+                color: "#fde047",
+                desc: "Tu marca irradia pureza, simplicidad y positivismo. Crees en hacer las cosas de manera ética y correcta. Atraes a clientes que buscan marcas confiables, honestas y sin complicaciones.",
+                strengths: ["Genera una confianza profunda e instantánea.", "Comunicación clara, sin jerga corporativa.", "Cultura de empresa altamente ética y leal."],
+                risks: ["Puede parecer ingenuo o poco preparado para grandes crisis.", "Dificultad para diferenciarse en mercados agresivos.", "Evitar el conflicto a costa del crecimiento."],
+                strategy: "Mantén tus promesas simples. Utiliza el storytelling emocional basado en la honestidad. Tu marketing debe sentirse como un alivio en un mundo complicado."
+            },
+            explorador: {
+                name: "El Explorador",
+                tagline: "La libertad y la innovación están fuera de la zona de confort.",
+                icon: "compass",
+                color: "#22c55e",
+                desc: "Eres pionero. Tu marca no sigue caminos trazados; los crea. Ofreces a tus clientes autonomía, descubrimiento y la promesa de una experiencia que los sacará de la rutina.",
+                strengths: ["Altamente innovador y adaptable.", "Atrae a clientes que buscan autenticidad y aventura.", "No teme pivotar ni probar nuevos modelos de negocio."],
+                risks: ["Falta de enfoque por perseguir siempre la próxima gran novedad.", "Mensaje de marca que puede sentirse desconectado para clientes tradicionales."],
+                strategy: "Tu producto debe ser un vehículo para la libertad del cliente. Muestra el 'detrás de escena' de tus procesos de creación y descubrimiento."
+            },
+            sabio: {
+                name: "El Sabio",
+                tagline: "La verdad y los datos liberan el potencial del negocio.",
+                icon: "book-open",
+                color: "#60a5fa",
+                desc: "Tu marca es una autoridad basada en el conocimiento, la analítica y la verdad. No vendes con emociones baratas; convences con metodologías comprobadas, datos y maestría.",
+                strengths: ["Se posiciona rápidamente como líder de opinión (autoridad).", "Atrae clientes premium que valoran el expertise.", "Toma de decisiones extremadamente racional."],
+                risks: ["Parálisis por análisis.", "Comunicación demasiado fría, técnica o condescendiente.", "Falta de urgencia emocional en las ventas."],
+                strategy: "Conviértete en el mentor de tu industria. Usa el marketing de contenidos profundo (whitepapers, masterclasses, auditorías) como tu principal motor de adquisición."
+            },
+            heroe: {
+                name: "El Héroe",
+                tagline: "Donde hay voluntad, hay un camino para triunfar.",
+                icon: "shield",
+                color: "#ef4444",
+                desc: "Tu marca trata sobre superación, disciplina y victoria. Desafías a tus clientes a ser mejores, a superar obstáculos y a alcanzar la grandeza mediante tu producto o servicio.",
+                strengths: ["Inspiración masiva y motivación para el equipo y clientes.", "Excelente para marcas enfocadas en el alto rendimiento o resultados rápidos.", "Cultura de trabajo resiliente."],
+                risks: ["Riesgo de burnout (agotamiento) en el equipo.", "Puede sonar arrogante si no muestra vulnerabilidad.", "Siempre busca una 'batalla' que librar."],
+                strategy: "Enfócate en los casos de éxito transformacionales. Tu marketing debe posicionar a tu cliente como el héroe y a tu producto como el arma que les permite ganar la batalla."
+            },
+            forajido: {
+                name: "El Forajido / Rebelde",
+                tagline: "Las reglas actuales están rotas; es hora de destruirlas.",
+                icon: "flame",
+                color: "#f97316",
+                desc: "Eres un disruptor. Tu marca cuestiona el status quo de la industria. No quieres mejorar lo que existe, quieres reemplazarlo. Eres audaz, provocativo y atraes a quienes están frustrados con lo tradicional.",
+                strengths: ["Diferenciación radical instantánea.", "Crea tribus de seguidores increíblemente leales y fanáticos.", "Marketing viral por naturaleza debido a la polarización."],
+                risks: ["Cruzar la línea de lo provocativo a lo ofensivo.", "Atraer clientes problemáticos o puramente conflictivos.", "Difícil de escalar en mercados muy corporativos (B2B tradicional)."],
+                strategy: "Posiciónate usando un enemigo común (una práctica antigua de tu sector). Usa un tono desafiante y crea un 'movimiento' más que una simple empresa."
+            },
+            mago: {
+                name: "El Mago",
+                tagline: "Transformamos los problemas complejos en resultados mágicos.",
+                icon: "wand-2",
+                color: "#a855f7",
+                desc: "Tu marca es un catalizador de transformación profunda. Ofreces experiencias visionarias, combinando tecnología, psicología o conocimientos exclusivos para crear resultados que parecen imposibles.",
+                strengths: ["Altísimo valor percibido; permite cobrar precios premium.", "Capacidad para crear experiencias de usuario inolvidables.", "Liderazgo visionario y carismático."],
+                risks: ["Hacer promesas que son difíciles de tangibilizar o medir.", "Si el proceso falla, se pierde toda la credibilidad (efecto 'vendehúmos')."],
+                strategy: "Enfócate en la 'experiencia' y la transformación del estado A al estado B de tu cliente. Usa casos de estudio visuales que muestren el contraste dramático de tus resultados."
+            },
+            ciudadano: {
+                name: "El Ciudadano (Tipo Normal)",
+                tagline: "Hacemos negocios reales para personas reales.",
+                icon: "users",
+                color: "#94a3b8",
+                desc: "La accesibilidad es tu superpoder. Tu marca es empática, sin pretensiones, confiable y realista. No buscas ser una deidad intocable, sino el aliado en el que siempre se puede confiar.",
+                strengths: ["Crea un sentido de pertenencia y comunidad masiva.", "Fricción de ventas muy baja por su alta confiabilidad.", "Excelente retención de clientes."],
+                risks: ["Peligro de caer en la mediocridad o volverse invisible.", "Dificultad para justificar precios premium o de lujo."],
+                strategy: "Utiliza el marketing basado en la comunidad y el contenido generado por el usuario (UGC). Habla el idioma exacto de tu cliente en sus frustraciones diarias."
+            },
+            amante: {
+                name: "El Amante",
+                tagline: "El deseo y la exclusividad son el motor de la experiencia.",
+                icon: "heart",
+                color: "#ec4899",
+                desc: "Tu marca apela a los sentidos, la pasión y el placer. Te enfocas en la estética, las relaciones profundas y en hacer que tus clientes se sientan especiales, atractivos y valorados.",
+                strengths: ["Genera una conexión emocional y sensorial inigualable.", "Ideal para servicios personalizados, lujo, diseño o bienestar.", "Fidelidad basada en la experiencia emocional."],
+                risks: ["Si la experiencia operativa falla, la magia se rompe.", "Dificultad para escalar sin perder el trato íntimo."],
+                strategy: "Cada punto de contacto debe ser hermoso y cuidado. Invierte fuertemente en branding visual, packaging y servicio al cliente hyper-personalizado."
+            },
+            bufon: {
+                name: "El Bufón",
+                tagline: "Si no es divertido y memorable, no vale la pena hacerlo.",
+                icon: "smile",
+                color: "#fbbf24",
+                desc: "Rompes la tensión corporativa con humor, irreverencia y frescura. Tu marca entretiene mientras vende. Sabes que la atención es la moneda más valiosa y usas la alegría para capturarla.",
+                strengths: ["Maestría en redes sociales y contenido viral.", "Humaniza industrias aburridas o complejas.", "Baja las barreras de defensa de los prospectos."],
+                risks: ["No ser tomado en serio en momentos críticos.", "El humor es subjetivo; riesgo de ofender accidentalmente."],
+                strategy: "Utiliza formatos interactivos, memes propios del sector y gamificación. Haz que comprarte sea la parte más divertida del día de tu cliente."
+            },
+            cuidador: {
+                name: "El Cuidador",
+                tagline: "El verdadero liderazgo es servir y proteger a los demás.",
+                icon: "shield-plus",
+                color: "#14b8a6",
+                desc: "El servicio al cliente y la empatía son el núcleo de tu negocio. Tu marca ofrece seguridad, apoyo y protección. Existes para facilitar la vida de tus usuarios y quitarles el dolor.",
+                strengths: ["Servicio al cliente legendario.", "Genera embajadores de marca masivos a través del boca a boca.", "Altísima confianza empresarial."],
+                risks: ["Dar demasiado gratis y sacrificar la rentabilidad.", "Agotamiento emocional del equipo de soporte.", "Dificultad para decir 'no' a clientes tóxicos."],
+                strategy: "Posiciona tu servicio al cliente como tu principal ventaja competitiva. Crea programas de éxito del cliente y garantías que eliminen el 100% del riesgo para ellos."
+            },
+            creador: {
+                name: "El Creador",
+                tagline: "Si se puede imaginar, se puede construir. Y debe ser perfecto.",
+                icon: "pen-tool",
+                color: "#8b5cf6",
+                desc: "Tu marca es sinónimo de innovación, autoexpresión y calidad estética/técnica. No revendes; tú diseñas. Atraes a quienes valoran el proceso artesanal o la ingeniería superior.",
+                strengths: ["Productos o servicios de una calidad y diseño incomparables.", "Liderazgo en tendencias dentro de tu industria.", "Alta valoración por derechos de autor, patentes o metodologías propias."],
+                risks: ["Perfeccionismo que retrasa los lanzamientos (parálisis).", "Enamorarse del producto y olvidar la estrategia de ventas."],
+                strategy: "Construye 'en público'. Deja que tu audiencia vea tu proceso creativo. Ofrece herramientas, plantillas o frameworks para que ellos también se sientan creadores."
+            },
+            gobernante: {
+                name: "El Gobernante",
+                tagline: "El orden, el control y la excelencia sostienen el imperio.",
+                icon: "crown",
+                color: "#d4af37",
+                desc: "Liderazgo absoluto. Tu marca impone respeto, estructura y estabilidad. Ofreces a tus clientes estatus y la seguridad de que están trabajando con el líder indiscutible del mercado.",
+                strengths: ["Crea organizaciones altamente escalables y ordenadas.", "Atrae corporaciones y clientes de muy alto nivel adquisitivo.", "Estabilidad y procesos predecibles."],
+                risks: ["Burocracia interna que ralentiza la innovación.", "Puede parecer corporativo, frío o distante.", "Arrogancia hacia la competencia emergente."],
+                strategy: "Muestra tu infraestructura, tus procesos y tu red de contactos de alto nivel. Vende exclusividad, garantías corporativas y membresías premium."
+            },
+            villano: {
+                name: "El Villano",
+                tagline: "El fin justifica los medios. Dominar es la única métrica que importa.",
+                icon: "skull",
+                color: "#ef4444",
+                desc: "Eres el arquetipo más oscuro y disruptivo. No juegas a ganar, juegas a monopolizar. Usas tácticas agresivas, monopolizas la atención y polarizas a tu audiencia. Tu marca es magnética precisamente por su falta de filtros morales tradicionales y su ambición cruda.",
+                strengths: ["Ambición y agresividad comercial inquebrantable.", "Pensamiento estratégico a nivel de 'ajedrez maestro'.", "Genera un culto a la personalidad basado en el poder y los resultados."],
+                risks: ["Crisis de reputación por tácticas poco éticas.", "Rotación masiva de equipo por ambiente tóxico o sobreexigente.", "Riesgos legales por empujar los límites regulatorios."],
+                strategy: "Apóyate en el antymarketing. Rompe las reglas de forma pública. Atrae a aquellos que están cansados de la hipocresía corporativa mostrándoles la verdad cruda de cómo se hace el dinero o se logra el éxito."
+            }
+        };
+
+        // --- PREGUNTAS DEL TEST ---
+        // Se distribuyen los puntos hacia diferentes arquetipos en cada opción.
+        const questions = [
+            {
+                text: "Cuando enfrentas un nuevo competidor que copia tu producto, ¿cuál es tu reacción?",
+                options: [
+                    { text: "Mejoro la estética y calidad de mi producto; el diseño original siempre prevalecerá.", points: ["creador"] },
+                    { text: "Lanzo una campaña agresiva para aplastarlo y sacarlo del mercado. Nadie juega en mi territorio.", points: ["villano", "gobernante"] },
+                    { text: "Ignoro el ruido. Sigo educando a mi comunidad con datos sobre por qué somos la mejor opción.", points: ["sabio", "ciudadano"] },
+                    { text: "Me burlo de su copia en redes sociales y uso la polémica para ganar más visibilidad.", points: ["bufon", "forajido"] }
+                ]
+            },
+            {
+                text: "¿Cómo defines el éxito final para tu empresa?",
+                options: [
+                    { text: "Transformar por completo la vida o mentalidad de mis clientes.", points: ["mago", "heroe"] },
+                    { text: "Crear una comunidad segura, leal y sentir que estamos cuidando de los nuestros.", points: ["cuidador", "inocente"] },
+                    { text: "Controlar la mayor cuota de mercado y dictar las reglas de la industria.", points: ["gobernante", "villano"] },
+                    { text: "Tener la libertad absoluta de trabajar desde donde sea, inventando cosas nuevas.", points: ["explorador", "creador"] }
+                ]
+            },
+            {
+                text: "Un cliente importante está muy insatisfecho y exige un reembolso irracional. Tú...",
+                options: [
+                    { text: "Se lo devuelvo inmediatamente para evitar problemas y mantener la paz.", points: ["inocente", "cuidador"] },
+                    { text: "Uso los términos y condiciones. Las reglas son las reglas y protegen el negocio.", points: ["gobernante", "sabio"] },
+                    { text: "Lo despido como cliente de forma directa; no tolero faltas de respeto ni vampiros de energía.", points: ["forajido", "villano"] },
+                    { text: "Intento tener una reunión VIP para darle una experiencia personalizada que lo enamore de nuevo.", points: ["amante", "mago"] }
+                ]
+            },
+            {
+                text: "¿Cuál es el tono principal de tus textos de venta (Copywriting)?",
+                options: [
+                    { text: "Lógico, estructurado, apoyado en estadísticas y estudios de caso.", points: ["sabio"] },
+                    { text: "Provocador, polarizante, desafiando a la competencia abiertamente.", points: ["villano", "forajido"] },
+                    { text: "Sensorial, exclusivo, apelando al estatus y al deseo profundo.", points: ["amante", "gobernante"] },
+                    { text: "Cercano, empático, hablando en el idioma de todos los días.", points: ["ciudadano", "bufon"] }
+                ]
+            },
+            {
+                text: "En una reunión de equipo para definir el trimestre, ¿cuál es tu postura?",
+                options: [
+                    { text: "Yo dicto los KPIs y las metas. El equipo debe ejecutar el plan sin desviaciones.", points: ["gobernante", "villano"] },
+                    { text: "Propongo una tormenta de ideas abierta para ver qué concepto innovador podemos crear.", points: ["creador", "explorador"] },
+                    { text: "Analizamos las métricas del trimestre anterior para ver qué nos dicen los datos.", points: ["sabio"] },
+                    { text: "Les doy una charla motivacional para que estemos listos para romper nuestros propios récords.", points: ["heroe", "mago"] }
+                ]
+            },
+            {
+                text: "¿Qué te hace sentir más orgulloso de tu marca?",
+                options: [
+                    { text: "Que hacemos las cosas de manera correcta, ética y transparente.", points: ["inocente"] },
+                    { text: "Que nadie más en el mercado tiene la audacia de hacer lo que nosotros hacemos.", points: ["forajido", "villano"] },
+                    { text: "Que nuestro servicio al cliente es considerado un abrazo cálido y seguro.", points: ["cuidador", "ciudadano"] },
+                    { text: "Que nuestro producto es una obra de arte, estéticamente perfecto.", points: ["creador", "amante"] }
+                ]
+            },
+            {
+                text: "Elige la frase que mejor represente tu filosofía de marketing:",
+                options: [
+                    { text: "Educar es la mejor manera de vender.", points: ["sabio", "cuidador"] },
+                    { text: "Hazlos reír y te darán su dinero.", points: ["bufon"] },
+                    { text: "Si no los estás incomodando, no estás haciendo marketing.", points: ["villano", "forajido"] },
+                    { text: "Muestra la transformación milagrosa; el 'antes y el después'.", points: ["mago", "heroe"] }
+                ]
+            },
+            {
+                text: "¿Cómo gestionas un error público de tu empresa?",
+                options: [
+                    { text: "Pido disculpas sinceras inmediatamente y compenso a los afectados.", points: ["cuidador", "inocente"] },
+                    { text: "No me disculpo; le doy la vuelta a la narrativa para que parezca un movimiento calculado.", points: ["villano", "gobernante"] },
+                    { text: "Hago un meme sobre nuestro propio error para quitarle peso y humanizarnos.", points: ["bufon", "ciudadano"] },
+                    { text: "Publico un análisis post-mortem detallado explicando técnicamente qué falló y cómo se arregló.", points: ["sabio"] }
+                ]
+            },
+            {
+                text: "¿Cómo estructuras los precios de tus productos/servicios?",
+                options: [
+                    { text: "Precios accesibles y justos; quiero ayudar a la mayor cantidad de gente posible.", points: ["ciudadano", "inocente"] },
+                    { text: "Precios extremadamente premium; la exclusividad y el estatus son parte de la oferta.", points: ["gobernante", "amante"] },
+                    { text: "Precios dinámicos o disruptivos que rompen el modelo de negocio tradicional.", points: ["forajido", "explorador"] },
+                    { text: "Valores atados al retorno de inversión (ROI) que genero.", points: ["sabio", "villano"] }
+                ]
+            },
+            {
+                text: "¿Cuál es tu red social preferida para hacer negocios y por qué?",
+                options: [
+                    { text: "LinkedIn: Permite posicionarme como autoridad y estructurar relaciones B2B.", points: ["gobernante", "sabio"] },
+                    { text: "TikTok/Reels: Puedo ser espontáneo, viral y mostrar la personalidad de la marca.", points: ["bufon", "explorador"] },
+                    { text: "X (Twitter): Excelente para polarizar, debatir y crear sectas de opinión.", points: ["villano", "forajido"] },
+                    { text: "Instagram: Es 100% visual; mi producto necesita ser admirado estéticamente.", points: ["creador", "amante"] }
+                ]
+            },
+            {
+                text: "Si tu marca fuera una película, ¿de qué género sería?",
+                options: [
+                    { text: "Un documental de investigación profunda.", points: ["sabio"] },
+                    { text: "Una película de acción donde el protagonista vence a todos contra todo pronóstico.", points: ["heroe"] },
+                    { text: "Un thriller psicológico sobre ambición, poder y traiciones.", points: ["villano", "gobernante"] },
+                    { text: "Una película de fantasía y efectos especiales increíbles.", points: ["mago", "creador"] }
+                ]
+            },
+            {
+                text: "¿Qué es lo que más te aburre en los negocios?",
+                options: [
+                    { text: "La rutina, la burocracia y hacer siempre lo mismo.", points: ["explorador", "forajido"] },
+                    { text: "El marketing barato y emocional que carece de sustancia o datos reales.", points: ["sabio", "creador"] },
+                    { text: "Tener que ser políticamente correcto y complacer a todo el mundo.", points: ["villano", "bufon"] },
+                    { text: "La falta de empatía o el trato frío hacia los clientes y empleados.", points: ["cuidador", "inocente"] }
+                ]
+            },
+            {
+                text: "¿Cómo prefieres diseñar tus funnels de venta?",
+                options: [
+                    { text: "Una experiencia inmersiva, casi mágica, que toca puntos emocionales profundos.", points: ["mago", "amante"] },
+                    { text: "Sistemas agresivos de escasez, upsells y cierres de presión psicológica.", points: ["villano", "forajido"] },
+                    { text: "Procesos altamente automatizados, medidos al milímetro por la analítica.", points: ["sabio", "gobernante"] },
+                    { text: "Chat en vivo o llamadas para hablar de humano a humano.", points: ["ciudadano", "cuidador"] }
+                ]
+            },
+            {
+                text: "Tu ventaja competitiva número uno es:",
+                options: [
+                    { text: "Nuestra capacidad para innovar y crear cosas nunca antes vistas.", points: ["creador", "explorador"] },
+                    { text: "Nuestra implacabilidad para dominar el mercado y aplastar ineficiencias.", points: ["villano", "gobernante"] },
+                    { text: "Nuestra historia de superación y la motivación que inyectamos.", points: ["heroe"] },
+                    { text: "Nuestra integridad total y la seguridad que brindamos.", points: ["cuidador", "inocente"] }
+                ]
+            },
+            {
+                text: "Al contratar a un nuevo miembro del equipo, buscas por encima de todo:",
+                options: [
+                    { text: "Talento creativo bruto y perfeccionismo técnico.", points: ["creador", "sabio"] },
+                    { text: "Lealtad absoluta y obediencia a la visión corporativa.", points: ["gobernante", "villano"] },
+                    { text: "Empatía, don de gentes y calidad humana.", points: ["cuidador", "ciudadano"] },
+                    { text: "Hambre de éxito, valentía y cero miedo al fracaso.", points: ["heroe", "forajido"] }
+                ]
+            },
+            {
+                text: "¿Cómo visualizas el diseño visual de tu marca (Logo, colores)?",
+                options: [
+                    { text: "Elegante, minimalista, transmitiendo estatus y lujo.", points: ["amante", "gobernante"] },
+                    { text: "Limpio, claro, usando blanco, azul y colores que dan confianza.", points: ["inocente", "sabio"] },
+                    { text: "Oscuro, agresivo, disruptivo, colores de alto contraste (negro, rojo, neón).", points: ["villano", "forajido"] },
+                    { text: "Divertido, vibrante, con ilustraciones y colores cálidos.", points: ["bufon", "ciudadano"] }
+                ]
+            },
+            {
+                text: "En una negociación importante, tu enfoque es:",
+                options: [
+                    { text: "Ganar-Ganar: Buscar que ambas partes salgan nutridas y felices.", points: ["cuidador", "ciudadano"] },
+                    { text: "Suma Cero: Yo me llevo la mayor parte del pastel, el otro se ajusta a mis términos.", points: ["villano", "gobernante"] },
+                    { text: "Datos sobre la mesa: Demostrar objetivamente por qué mi propuesta es matemáticamente superior.", points: ["sabio"] },
+                    { text: "Seducción: Enamorar a la otra parte de la visión hasta que el precio no importe.", points: ["amante", "mago"] }
+                ]
+            },
+            {
+                text: "¿Qué frase resuena más con tus operaciones internas?",
+                options: [
+                    { text: "El caos es una escalera para el genio creativo.", points: ["forajido", "creador"] },
+                    { text: "Sin sistemas y jerarquías, no hay imperio escalable.", points: ["gobernante", "sabio"] },
+                    { text: "La oficina debe sentirse como una segunda familia.", points: ["cuidador", "inocente"] },
+                    { text: "La presión crea diamantes; exigimos excelencia extrema.", points: ["villano", "heroe"] }
+                ]
+            },
+            {
+                text: "Si tuvieras que escribir un libro empresarial, el título sería:",
+                options: [
+                    { text: "'El arte de hacer las cosas bien y con propósito'.", points: ["inocente", "ciudadano"] },
+                    { text: "'Las 48 Leyes del Poder y el Dominio del Mercado'.", points: ["villano", "gobernante"] },
+                    { text: "'Hackeando la Realidad: Innovación, Diseño y Magia'.", points: ["mago", "creador"] },
+                    { text: "'Cero Excusas: Cómo superar cualquier obstáculo y vencer'.", points: ["heroe"] }
+                ]
+            },
+            {
+                text: "Última pregunta. En tu interior, ¿por qué emprendiste?",
+                options: [
+                    { text: "Para ser libre y no tener que rendirle cuentas a ningún jefe o sistema.", points: ["explorador", "forajido"] },
+                    { text: "Para construir un legado de poder, riqueza y control absoluto sobre mi destino.", points: ["villano", "gobernante"] },
+                    { text: "Para ayudar genuinamente a otros compartiendo lo que sé.", points: ["cuidador", "sabio"] },
+                    { text: "Para expresar mi creatividad y dejar mi arte en el mundo.", points: ["creador", "amante"] }
+                ]
+            }
+        ];
+
+        // --- ESTADO DE LA APLICACIÓN ---
+        let currentQuestionIndex = 0;
+        let scores = {};
+
+        // Inicializar scores
+        Object.keys(archetypesData).forEach(key => { scores[key] = 0; });
+
+        // --- FUNCIONES CORE ---
+        function startTest() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('test-screen').classList.remove('hidden');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const testScreen = document.getElementById('test-screen');
+            // Resetear animación
+            testScreen.classList.remove('slide-up');
+            void testScreen.offsetWidth; // Trigger reflow
+            testScreen.classList.add('slide-up');
+
+            const q = questions[currentQuestionIndex];
+            document.getElementById('progress-text').innerText = `${currentQuestionIndex + 1} / ${questions.length}`;
+            document.getElementById('progress-bar').style.width = `${((currentQuestionIndex) / questions.length) * 100}%`;
+            
+            document.getElementById('question-text').innerText = q.text;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = ''; // Limpiar
+
+            // Renderizar opciones
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn w-full text-left bg-slate-800 border border-slate-700 hover:border-blue-500 rounded-xl p-5 text-slate-200 text-lg flex items-center gap-4";
+                btn.innerHTML = `
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center font-bold text-sm">
+                        ${String.fromCharCode(65 + idx)}
+                    </div>
+                    <span>${opt.text}</span>
+                `;
+                btn.onclick = () => handleAnswer(opt.points);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(pointsArray) {
+            // Asignar puntos
+            pointsArray.forEach(arch => {
+                scores[arch] += 1;
+            });
+
+            currentQuestionIndex++;
+
+            if (currentQuestionIndex < questions.length) {
+                renderQuestion();
+            } else {
+                document.getElementById('progress-bar').style.width = `100%`;
+                finishTest();
+            }
+        }
+
+        function finishTest() {
+            document.getElementById('test-screen').classList.add('hidden');
+            document.getElementById('loading-screen').classList.remove('hidden');
+
+            // Simular carga de análisis para gamificación/valor percibido
+            setTimeout(() => {
+                calculateResult();
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('result-wrapper').classList.remove('hidden');
+                triggerConfetti();
+            }, 2500);
+        }
+
+        function calculateResult() {
+            let maxScore = -1;
+            let winner = 'sabio'; // Default fallback
+
+            // Lógica de desempate: Si hay empate, dar prioridad a arquetipos más audaces (villano, forajido)
+            const tieBreakerWeight = { villano: 13, forajido: 12, gobernante: 11, mago: 10, creador: 9, heroe: 8, explorador: 7, amante: 6, bufon: 5, sabio: 4, ciudadano: 3, cuidador: 2, inocente: 1 };
+
+            for (const [arch, score] of Object.entries(scores)) {
+                if (score > maxScore) {
+                    maxScore = score;
+                    winner = arch;
+                } else if (score === maxScore) {
+                    if (tieBreakerWeight[arch] > tieBreakerWeight[winner]) {
+                        winner = arch;
+                    }
+                }
+            }
+
+            renderReport(winner);
+        }
+
+        function renderReport(winnerKey) {
+            const data = archetypesData[winnerKey];
+            
+            // Inyectar Icono
+            document.getElementById('archetype-icon-container').innerHTML = `<i data-lucide="${data.icon}" class="w-12 h-12" style="color: ${data.color}"></i>`;
+            
+            // Textos base
+            document.getElementById('archetype-name').innerText = data.name;
+            document.getElementById('archetype-name').style.color = data.color;
+            document.getElementById('archetype-tagline').innerText = `"${data.tagline}"`;
+            document.getElementById('archetype-desc').innerText = data.desc;
+            document.getElementById('archetype-strategy').innerText = data.strategy;
+            
+            // Listas
+            const strengthsList = document.getElementById('archetype-strengths');
+            strengthsList.innerHTML = data.strengths.map(s => `<li>• ${s}</li>`).join('');
+            
+            const risksList = document.getElementById('archetype-risks');
+            risksList.innerHTML = data.risks.map(r => `<li>• ${r}</li>`).join('');
+
+            // Background hint
+            document.getElementById('result-bg').style.background = `linear-gradient(45deg, ${data.color}, transparent)`;
+
+            // Renderizar nuevos iconos
+            lucide.createIcons();
+        }
+
+        function triggerConfetti() {
+            var duration = 3000;
+            var end = Date.now() + duration;
+
+            (function frame() {
+                confetti({
+                    particleCount: 5,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#3b82f6', '#ef4444', '#f59e0b']
+                });
+                confetti({
+                    particleCount: 5,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#3b82f6', '#ef4444', '#f59e0b']
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+
+        function downloadReport() {
+            // Activar modo PDF (colores claros para la impresión)
+            const wrapper = document.getElementById('result-wrapper');
+            wrapper.classList.add('pdf-mode');
+
+            const element = document.getElementById('report-content');
+            const name = document.getElementById('archetype-name').innerText.replace(/\s+/g, '_');
+            
+            const opt = {
+                margin:       10,
+                filename:     `Reporte_Arquetipo_${name}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restaurar el modo oscuro tras la descarga
+                wrapper.classList.remove('pdf-mode');
+            });
+        }
+
+        // Inicializar iconos en pantalla de inicio
+        lucide.createIcons();
+    </script>
+</body>
+</html>
